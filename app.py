@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import io
 import zipfile
-from scipy.cluster.hierarchy import dendrogram, linkage
 import re
 
 # ---- matplotlib safe backend (CRITICAL for servers) ----
@@ -186,17 +185,20 @@ if results:
     ax.set_xticklabels(perc_df["file"], rotation=45, ha="right")
     st.pyplot(fig)
 
-    # ---------- Dendrogram ----------
-    st.markdown("**Dendrogram (group files by sentiment similarity)**")
-    if len(summary_df) > 1:
-        X = summary_df[["mean"]].values
-        Z = linkage(X, method="ward")
+    # ---------- Similarity Heatmap (replaces dendrogram) ----------
+    st.markdown("**File Similarity Heatmap (based on mean sentiment)**")
 
-        fig2, ax2 = plt.subplots()
-        dendrogram(Z, labels=summary_df["file"].values, ax=ax2)
-        st.pyplot(fig2)
-    else:
-        st.info("Need at least 2 files for dendrogram.")
+    means = summary_df["mean"].values.reshape(-1, 1)
+    sim_matrix = 1 - np.abs(means - means.T) / 10  # normalize to 0–1
+
+    fig_hm, ax_hm = plt.subplots()
+    cax = ax_hm.imshow(sim_matrix)
+    ax_hm.set_xticks(range(len(summary_df)))
+    ax_hm.set_yticks(range(len(summary_df)))
+    ax_hm.set_xticklabels(summary_df["file"], rotation=45, ha="right")
+    ax_hm.set_yticklabels(summary_df["file"])
+    fig_hm.colorbar(cax)
+    st.pyplot(fig_hm)
 
     # ---------- Individual line charts ----------
     st.subheader("Individual File Sentiment Flow")
