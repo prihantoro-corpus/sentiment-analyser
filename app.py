@@ -3,10 +3,15 @@ import pandas as pd
 import numpy as np
 import io
 import zipfile
-import matplotlib.pyplot as plt
 from textblob import TextBlob
 from scipy.cluster.hierarchy import dendrogram, linkage
 import re
+
+# ---- matplotlib safe backend (CRITICAL for servers) ----
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+
 
 st.set_page_config(page_title="Multi-file Sentiment Analyzer", layout="wide")
 st.title("Multi-file Sentiment Analyzer")
@@ -32,6 +37,7 @@ def split_into_sentences(text):
 language = st.selectbox("Choose language", ["EN", "ID", "JP"], index=0)
 if language != "EN":
     st.info("Sentiment analysis is currently supported for English only. Other languages are accepted as input but not analyzed.")
+
 
 # =========================================================
 # Input method
