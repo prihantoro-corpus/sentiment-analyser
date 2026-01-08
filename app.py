@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import io
 import zipfile
-from textblob import TextBlob
 from scipy.cluster.hierarchy import dendrogram, linkage
 import re
 
@@ -12,9 +11,13 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+
 
 st.set_page_config(page_title="Multi-file Sentiment Analyzer", layout="wide")
 st.title("Multi-file Sentiment Analyzer")
+
+analyzer = SentimentIntensityAnalyzer()
 
 # =========================================================
 # Sentence segmentation utility
@@ -22,13 +25,9 @@ st.title("Multi-file Sentiment Analyzer")
 def split_into_sentences(text):
     if not text:
         return []
-    # Normalize whitespace
     text = re.sub(r"\s+", " ", text).strip()
-
-    # Rule-based splitter: . ! ? followed by space and capital/number
     parts = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", text)
-    sentences = [p.strip() for p in parts if p.strip()]
-    return sentences
+    return [p.strip() for p in parts if p.strip()]
 
 
 # =========================================================
@@ -52,7 +51,6 @@ if input_mode == "Direct Input":
     )
 
     if text_input.strip():
-        # If user already used line breaks, respect them; otherwise auto-split
         if "\n" in text_input.strip():
             sentences = [line.strip() for line in text_input.splitlines() if line.strip()]
         else:
@@ -84,7 +82,6 @@ else:
         else:
             continue
 
-        # If already one sentence per line, keep; otherwise auto-split
         if "\n" in raw_text.strip():
             sentences = [line.strip() for line in raw_text.splitlines() if line.strip()]
         else:
@@ -94,13 +91,15 @@ else:
 
 
 # =========================================================
-# Sentiment function (scaled -5 to +5)
+# Sentiment function (VADER, scaled -5 to +5)
 # =========================================================
 def sentiment_score(sentence):
     if not sentence or language != "EN":
         return 0.0
-    polarity = TextBlob(sentence).sentiment.polarity  # -1 to +1
-    return round(polarity * 5, 2)
+
+    vs = analyzer.polarity_scores(sentence)
+    compound = vs["compound"]  # -1 to +1
+    return round(compound * 5, 2)
 
 
 # =========================================================
