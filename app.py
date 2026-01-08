@@ -171,7 +171,7 @@ if results:
 
 
 # =========================================================
-# OVERALL CHARTS — SIDE BY SIDE
+# OVERALL CHARTS — SIDE BY SIDE (SMALL FONTS)
 # =========================================================
 if results:
     st.subheader("Overall Comparison")
@@ -200,18 +200,18 @@ if results:
             label="Positive"
         )
 
-        ax_bar.set_ylabel("Percentage", fontsize=9)
-        ax_bar.set_xticklabels(perc_df["file"], rotation=30, ha="right", fontsize=8)
-        ax_bar.set_title("Sentiment Distribution", fontsize=10)
+        ax_bar.set_ylabel("Percentage", fontsize=5)
+        ax_bar.set_xticklabels(perc_df["file"], rotation=30, ha="right", fontsize=5)
+        ax_bar.set_title("Sentiment Distribution", fontsize=6)
 
-        # ---- LEGEND OUTSIDE (LEFT) ----
+        # ---- LEGEND OUTSIDE (LEFT), SMALL FONT ----
         ax_bar.legend(
-            fontsize=7,
+            fontsize=5,
             frameon=False,
             loc="center right",
-            bbox_to_anchor=(-0.15, 0.5)
+            bbox_to_anchor=(-0.18, 0.5)
         )
-        fig_bar.subplots_adjust(left=0.30)
+        fig_bar.subplots_adjust(left=0.32)
 
         st.pyplot(fig_bar)
 
@@ -228,12 +228,13 @@ if results:
                 Z,
                 labels=summary_df["file"].values,
                 orientation="right",
-                leaf_font_size=8,
+                leaf_font_size=5,
                 ax=ax_den
             )
 
-            ax_den.set_xlabel("Distance", fontsize=9)
-            ax_den.set_title("Hierarchical Clustering", fontsize=10)
+            ax_den.set_xlabel("Distance", fontsize=5)
+            ax_den.set_title("Hierarchical Clustering", fontsize=6)
+            ax_den.tick_params(axis='both', labelsize=5)
 
             st.pyplot(fig_den)
         else:
