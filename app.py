@@ -130,19 +130,18 @@ for fname, sentences in files_data.items():
 
 
 # =========================================================
-# File selector (ONLY ONE FILE SHOWN)
+# Single file preview + download
 # =========================================================
 selected_file = None
 
 if results:
-    selected_file = st.selectbox("Select file to view", list(results.keys()))
+    selected_file = st.selectbox("Select file to preview", list(results.keys()))
     df_selected = results[selected_file]
 
     st.subheader(f"Preview: {selected_file}")
     preview_df = pd.concat([df_selected.head(5), df_selected.tail(5)])
     st.dataframe(preview_df, use_container_width=True)
 
-    # ---- download single file
     out_single = io.BytesIO()
     df_selected.to_excel(out_single, index=False)
 
@@ -174,115 +173,91 @@ if results:
 
 
 # =========================================================
-# Charts + HTML export (VISIBILITY OPTIMIZED)
+# OVERALL CHARTS — SIDE BY SIDE
 # =========================================================
-chart_images = []
-
-def fig_to_base64(fig):
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=120, bbox_inches="tight")
-    plt.close(fig)
-    return base64.b64encode(buf.getvalue()).decode("utf-8")
-
-
 if results:
-    st.subheader("Overall Comparison Charts")
+    st.subheader("Overall Comparison")
 
     summary_df = pd.DataFrame(summary_rows)
 
+    col1, col2 = st.columns(2)
+
     # ---------- 100% stacked bar ----------
-    st.markdown("**100% Stacked Bar (Negative / Neutral / Positive)**")
+    with col1:
+        st.markdown("**100% Stacked Bar**")
 
-    perc_df = summary_df.copy()
-    total = perc_df[["negative", "neutral", "positive"]].sum(axis=1)
-    perc_df["negative"] = perc_df["negative"] / total * 100
-    perc_df["neutral"] = perc_df["neutral"] / total * 100
-    perc_df["positive"] = perc_df["positive"] / total * 100
+        perc_df = summary_df.copy()
+        total = perc_df[["negative", "neutral", "positive"]].sum(axis=1)
+        perc_df["negative"] = perc_df["negative"] / total * 100
+        perc_df["neutral"] = perc_df["neutral"] / total * 100
+        perc_df["positive"] = perc_df["positive"] / total * 100
 
-    fig_bar, ax_bar = plt.subplots(figsize=(5, 3))
-    ax_bar.bar(perc_df["file"], perc_df["negative"], label="Negative")
-    ax_bar.bar(perc_df["file"], perc_df["neutral"], bottom=perc_df["negative"], label="Neutral")
-    ax_bar.bar(
-        perc_df["file"],
-        perc_df["positive"],
-        bottom=perc_df["negative"] + perc_df["neutral"],
-        label="Positive"
-    )
-
-    ax_bar.set_ylabel("Percentage", fontsize=9)
-    ax_bar.set_xticklabels(perc_df["file"], rotation=30, ha="right", fontsize=8)
-    ax_bar.legend(fontsize=8, frameon=False)
-    ax_bar.set_title("Sentiment Distribution per File", fontsize=10)
-
-    st.pyplot(fig_bar)
-    chart_images.append(("Stacked Bar", fig_to_base64(fig_bar)))
-
-    # ---------- Dendrogram ----------
-    st.markdown("**Dendrogram (Sentiment Similarity Across Files)**")
-
-    if len(summary_df) > 1:
-        X = summary_df[["mean", "negative", "neutral", "positive"]].values
-        Z = linkage(X, method="ward")
-
-        fig_den, ax_den = plt.subplots(figsize=(5, 3))
-        dendrogram(
-            Z,
-            labels=summary_df["file"].values,
-            orientation="right",
-            leaf_font_size=8,
-            ax=ax_den
+        fig_bar, ax_bar = plt.subplots(figsize=(4, 3))
+        ax_bar.bar(perc_df["file"], perc_df["negative"], label="Negative")
+        ax_bar.bar(perc_df["file"], perc_df["neutral"], bottom=perc_df["negative"], label="Neutral")
+        ax_bar.bar(
+            perc_df["file"],
+            perc_df["positive"],
+            bottom=perc_df["negative"] + perc_df["neutral"],
+            label="Positive"
         )
 
-        ax_den.set_xlabel("Distance", fontsize=9)
-        ax_den.set_title("Hierarchical Clustering of Files by Sentiment", fontsize=10)
+        ax_bar.set_ylabel("Percentage", fontsize=9)
+        ax_bar.set_xticklabels(perc_df["file"], rotation=30, ha="right", fontsize=8)
+        ax_bar.legend(fontsize=7, frameon=False)
+        ax_bar.set_title("Sentiment Distribution", fontsize=10)
 
-        st.pyplot(fig_den)
-        chart_images.append(("Dendrogram", fig_to_base64(fig_den)))
-    else:
-        st.info("Need at least 2 files for dendrogram.")
+        st.pyplot(fig_bar)
+
+    # ---------- Dendrogram ----------
+    with col2:
+        st.markdown("**Dendrogram (Similarity)**")
+
+        if len(summary_df) > 1:
+            X = summary_df[["mean", "negative", "neutral", "positive"]].values
+            Z = linkage(X, method="ward")
+
+            fig_den, ax_den = plt.subplots(figsize=(4, 3))
+            dendrogram(
+                Z,
+                labels=summary_df["file"].values,
+                orientation="right",
+                leaf_font_size=8,
+                ax=ax_den
+            )
+
+            ax_den.set_xlabel("Distance", fontsize=9)
+            ax_den.set_title("Hierarchical Clustering", fontsize=10)
+
+            st.pyplot(fig_den)
+        else:
+            st.info("Need at least 2 files for dendrogram.")
 
 
 # =========================================================
-# Individual chart (SMALL but readable)
+# INDIVIDUAL FILE CHARTS — 4 PER ROW
 # =========================================================
-if results and selected_file:
-    st.subheader("Individual File Sentiment Flow")
+if results:
+    st.subheader("Individual Sentiment Flows")
 
-    df = df_selected
+    file_names = list(results.keys())
+    rows = [file_names[i:i+4] for i in range(0, len(file_names), 4)]
 
-    fig_i, ax_i = plt.subplots(figsize=(3.5, 2))
-    ax_i.plot(range(len(df)), df["score"], linewidth=1.2)
+    for row_files in rows:
+        cols = st.columns(4)
 
-    ax_i.set_ylim(-5, 5)
-    ax_i.set_ylabel("Sentiment", fontsize=8)
-    ax_i.set_xlabel("Sentence Index", fontsize=8)
-    ax_i.set_title(selected_file, fontsize=9)
+        for idx, fname in enumerate(row_files):
+            df = results[fname]
 
-    ax_i.tick_params(axis='both', labelsize=7)
+            fig_i, ax_i = plt.subplots(figsize=(3, 2))
+            ax_i.plot(range(len(df)), df["score"], linewidth=1)
 
-    st.pyplot(fig_i)
-    chart_images.append((f"Sentiment Flow - {selected_file}", fig_to_base64(fig_i)))
+            ax_i.set_ylim(-5, 5)
+            ax_i.set_title(fname, fontsize=9)
+            ax_i.set_xlabel("Idx", fontsize=7)
+            ax_i.set_ylabel("Score", fontsize=7)
+            ax_i.tick_params(axis='both', labelsize=7)
+
+            cols[idx].pyplot(fig_i)
 
 
-# =========================================================
-# Download ALL charts as HTML
-# =========================================================
-if chart_images:
-    html_parts = [
-        "<html><head><meta charset='utf-8'><title>Sentiment Charts</title></head><body>",
-        "<h1>Sentiment Analysis Charts</h1>"
-    ]
-
-    for title, img_b64 in chart_images:
-        html_parts.append(f"<h2>{title}</h2>")
-        html_parts.append(f"<img src='data:image/png;base64,{img_b64}' style='max-width:100%;'><br><br>")
-
-    html_parts.append("</body></html>")
-    html_content = "\n".join(html_parts)
-
-    st.download_button(
-        label="Download ALL charts as HTML",
-        data=html_content.encode("utf-8"),
-        file_name="sentiment_charts.html",
-        mime="text/html"
-    )
