@@ -2,7 +2,6 @@ streamlit
 pandas
 numpy
 textblob
-scikit-learn
 scipy
 matplotlib
 openpyxl
