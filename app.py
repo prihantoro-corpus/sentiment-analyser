@@ -4,7 +4,6 @@ import numpy as np
 import io
 import zipfile
 import re
-import base64
 
 # ---- matplotlib safe backend ----
 import matplotlib
@@ -13,6 +12,7 @@ import matplotlib.pyplot as plt
 
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from scipy.cluster.hierarchy import dendrogram, linkage
+from matplotlib.backends.backend_pdf import PdfPages
 
 
 # =========================================================
@@ -154,21 +154,20 @@ if results:
 
 
 # =========================================================
-# Download ALL files as ZIP
+# Download ALL files as ONE Excel (multi-sheet)
 # =========================================================
 if results:
-    zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+    all_excel_buffer = io.BytesIO()
+    with pd.ExcelWriter(all_excel_buffer, engine="openpyxl") as writer:
         for fname, df in results.items():
-            out = io.BytesIO()
-            df.to_excel(out, index=False)
-            zf.writestr(fname + ".xlsx", out.getvalue())
+            safe_sheet = re.sub(r"[\\/*?:\[\]]", "_", fname)[:31]
+            df.to_excel(writer, sheet_name=safe_sheet, index=False)
 
     st.download_button(
-        label="Download ALL files as ZIP (Excel)",
-        data=zip_buffer.getvalue(),
-        file_name="sentiment_all_results.zip",
-        mime="application/zip"
+        label="Download ALL files as ONE Excel (multi-sheet)",
+        data=all_excel_buffer.getvalue(),
+        file_name="sentiment_all_files.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
 
@@ -179,7 +178,6 @@ if results:
     st.subheader("Overall Comparison")
 
     summary_df = pd.DataFrame(summary_rows)
-
     col1, col2 = st.columns(2)
 
     # ---------- 100% stacked bar ----------
@@ -261,3 +259,29 @@ if results:
             cols[idx].pyplot(fig_i)
 
 
+# =========================================================
+# EXPORT ALL INDIVIDUAL CHARTS AS ONE PDF (multi-page)
+# =========================================================
+if results:
+    pdf_buffer = io.BytesIO()
+
+    with PdfPages(pdf_buffer) as pdf:
+        for fname, df in results.items():
+            fig, ax = plt.subplots(figsize=(6, 3.5))
+
+            ax.plot(range(len(df)), df["score"], linewidth=1.2)
+            ax.set_ylim(-5, 5)
+            ax.set_title(fname, fontsize=11)
+            ax.set_xlabel("Sentence Index", fontsize=9)
+            ax.set_ylabel("Sentiment (-5 to +5)", fontsize=9)
+            ax.tick_params(axis='both', labelsize=8)
+
+            pdf.savefig(fig, dpi=150, bbox_inches="tight")
+            plt.close(fig)
+
+    st.download_button(
+        label="Download ALL individual charts as PDF",
+        data=pdf_buffer.getvalue(),
+        file_name="sentiment_individual_charts.pdf",
+        mime="application/pdf"
+    )
