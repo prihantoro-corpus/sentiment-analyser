@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import io
-import zipfile
 import re
 
 # ---- matplotlib safe backend ----
@@ -191,6 +190,7 @@ if results:
         perc_df["positive"] = perc_df["positive"] / total * 100
 
         fig_bar, ax_bar = plt.subplots(figsize=(4, 3))
+
         ax_bar.bar(perc_df["file"], perc_df["negative"], label="Negative")
         ax_bar.bar(perc_df["file"], perc_df["neutral"], bottom=perc_df["negative"], label="Neutral")
         ax_bar.bar(
@@ -202,8 +202,16 @@ if results:
 
         ax_bar.set_ylabel("Percentage", fontsize=9)
         ax_bar.set_xticklabels(perc_df["file"], rotation=30, ha="right", fontsize=8)
-        ax_bar.legend(fontsize=7, frameon=False)
         ax_bar.set_title("Sentiment Distribution", fontsize=10)
+
+        # ---- LEGEND OUTSIDE (LEFT) ----
+        ax_bar.legend(
+            fontsize=7,
+            frameon=False,
+            loc="center right",
+            bbox_to_anchor=(-0.15, 0.5)
+        )
+        fig_bar.subplots_adjust(left=0.30)
 
         st.pyplot(fig_bar)
 
